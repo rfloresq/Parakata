@@ -18,7 +18,7 @@
 using namespace std;
 
 class Vector;
-class Coral;
+class Parakata;
 class ImageRender;
 class PlotManager;
 class wheelEvent;
@@ -28,10 +28,10 @@ class Viewer : public QGLWidget
   Q_OBJECT
 
   public:
-    Viewer( Coral* );
+    Viewer( Parakata* );
    ~Viewer();
 
-    Coral *coral;
+    Parakata *prk;
 
     double trans[3];
     double scale;

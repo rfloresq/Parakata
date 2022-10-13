@@ -15,7 +15,7 @@
 #include <fcns.h>
 #include <global.h>
 
-#include <Coral.h>
+#include <Parakata.h>
 #include <Viewer.h>
 #include <GeometryEditor.h>
 #include <ElementSelector.h>
@@ -25,12 +25,12 @@
 
 bool perspective = false;
 
-Viewer::Viewer( Coral *is )
+Viewer::Viewer( Parakata *is )
       : QGLWidget( is )
 {
-  coral = is;
+  prk = is;
   image_render = new ImageRender( this );
-  pmgr = new PlotManager( coral , this );
+  pmgr = new PlotManager( prk , this );
 
   ResetRotation();
 
@@ -151,6 +151,15 @@ void Viewer::paintGL()
   glScalef( scale , scale , scale );
  
   DrawMolecule( 0 , NATOM-1 , geosrs , geocrs );
+  //int half = NATOM/2;
+  //DrawMolecule( 0 , half-1 , geosrs , geocrs );
+  //for (int i=0;i<MAXEL;i++)
+  //  for (int j=0;j<3;j++)
+  //    ELEMENT_COLOR[i][j] = ELEMENT_COLOR[i][j]*0.3;
+  //DrawMolecule( half , NATOM-1 , geosrs , geocrs );
+  //for (int i=0;i<MAXEL;i++)
+  //  for (int j=0;j<3;j++)
+  //    ELEMENT_COLOR[i][j] = ELEMENT_COLOR[i][j]/0.3;
 
   DrawSurfaces();
 
@@ -165,19 +174,19 @@ void Viewer::mousePressEvent( QMouseEvent *e )
 {
   mouse[0] = e->x();
   mouse[1] = e->y();
-  if ( ( coral->status & SFB  ) ||
-       ( coral->status & SFA  ) ||
-       ( coral->status & SFD  ) ||
-       ( coral->status & SFFV ) ||
-       ( coral->status & SFRV ) ||
-       ( coral->status & SFAV ) ||
-       ( coral->status & SFDV ) ||
-       ( coral->status & SFPB ) ||       
-       ( coral->status & SFPG ) )
+  if ( ( prk->status & SFB  ) ||
+       ( prk->status & SFA  ) ||
+       ( prk->status & SFD  ) ||
+       ( prk->status & SFFV ) ||
+       ( prk->status & SFRV ) ||
+       ( prk->status & SFAV ) ||
+       ( prk->status & SFDV ) ||
+       ( prk->status & SFPB ) ||       
+       ( prk->status & SFPG ) )
   {
     PickAtom();
   };
-  if ( coral->status & SFSURF )
+  if ( prk->status & SFSURF )
   {
     PickSurface();
   }
@@ -610,7 +619,8 @@ void Viewer::DrawMolecule( int ll, int ul, double srs, double crs)
 
     if ( crs != 0.0 || srs == 0.0 )
     {
-      for ( jatom = iatom-1 ; jatom >= 0 ; jatom-- )
+      //for ( jatom = iatom-1 ; jatom >= 0 ; jatom-- )
+      for ( jatom = iatom-1 ; jatom >= ll ; jatom-- )
       {
         posb = &COORD[1][jatom][0]; 
         dist = ::distance(iatom,jatom);
@@ -673,7 +683,8 @@ ARROW:
     }
   }
   else if (arrow_type == "NFF HOMO" || arrow_type == "NFF LUMO" ||
-           arrow_type == "Forces") 
+           arrow_type == "NFFEX" || arrow_type == "NFFEY" ||
+           arrow_type == "NFFEZ" || arrow_type == "Forces") 
   {
     double norma;
     double arrow[3];
@@ -686,6 +697,24 @@ ARROW:
         arrow[0] = 50.0*ATOMFORCE[iatom][0];
         arrow[1] = 50.0*ATOMFORCE[iatom][1];
         arrow[2] = 50.0*ATOMFORCE[iatom][2];
+      }
+      else if (arrow_type == "NFFEX") 
+      {
+        arrow[0] = ATOMNFFEX[iatom][0];
+        arrow[1] = ATOMNFFEX[iatom][1];
+        arrow[2] = ATOMNFFEX[iatom][2];
+      }
+      else if (arrow_type == "NFFEY") 
+      {
+        arrow[0] = ATOMNFFEY[iatom][0];
+        arrow[1] = ATOMNFFEY[iatom][1];
+        arrow[2] = ATOMNFFEY[iatom][2];
+      }
+      else if (arrow_type == "NFFEZ") 
+      {
+        arrow[0] = ATOMNFFEZ[iatom][0];
+        arrow[1] = ATOMNFFEZ[iatom][1];
+        arrow[2] = ATOMNFFEZ[iatom][2];
       }
       else if (arrow_type == "NFF HOMO") 
       {
@@ -759,10 +788,10 @@ void Viewer::SaveSelection( int n )
 
   changed = false;
 
-  if ( coral->status & SFSURF )
+  if ( prk->status & SFSURF )
   {
-    coral->app->beep();
-    coral->status &= ~SFSURF;
+    prk->app->beep();
+    prk->status &= ~SFSURF;
     QColor color; 
     color = QColorDialog::getColor( color , this );
     double col[4];
@@ -771,53 +800,53 @@ void Viewer::SaveSelection( int n )
     col[1] = color.green()/255.0;
     col[2] = color.blue()/255.0;
     pmgr->SetColor( n , col );
-    coral->SetCursor( "Normal" );
+    prk->SetCursor( "Normal" );
     Redraw();
   }
-  else if ( coral->status & SFRV )
+  else if ( prk->status & SFRV )
   {
     if ( SelectedAtom( n ) < 0 )
     {
-      coral->app->beep();
+      prk->app->beep();
       selected_atoms.push_back( n );
       if ( selected_atoms.size() == 2 )
       {
         monitored_bonds.push_back( selected_atoms );
         selected_atoms.clear();
-        coral->status &= ~SFRV;
-        coral->Report("Atom %d selected, selection done",n + 1);  
-        coral->SetCursor( "Normal" );
+        prk->status &= ~SFRV;
+        prk->Report("Atom %d selected, selection done",n + 1);  
+        prk->SetCursor( "Normal" );
       }
       else
       {
-        coral->Report("Atom %d selected, select another",n + 1);  
+        prk->Report("Atom %d selected, select another",n + 1);  
       };
       Redraw();
     };
   }
 
- else if ( coral->status & SFPG )
+ else if ( prk->status & SFPG )
   {
     if ( SelectedAtom( n ) < 0 )
     {
-      coral->app->beep();
+      prk->app->beep();
       selected_atoms.push_back( n );
       if ( selected_atoms.size() == 3 )
       {
         char gname[80];
         int ref[3];
-        strcpy(gname,coral->geoeditor->gname);
+        strcpy(gname,prk->geoeditor->gname);
         ref[0] = selected_atoms[0];
         ref[1] = selected_atoms[1];
         ref[2] = selected_atoms[2];
-        coral->status &= ~SFPG;
+        prk->status &= ~SFPG;
         if (sgdrv(gname,ref))
         {
-          coral->Report("Group building failed");
+          prk->Report("Group building failed");
         }
         else
         {
-          coral->geoeditor->Update();
+          prk->geoeditor->Update();
           changed = true;
         }
       }
@@ -827,114 +856,114 @@ void Viewer::SaveSelection( int n )
       };
     };
   }
- else if ( coral->status & SFPB )
+ else if ( prk->status & SFPB )
   {
     if ( SelectedAtom( n ) < 0 )
     {
-      coral->app->beep();
+      prk->app->beep();
       selected_atoms.push_back( n );
       if ( selected_atoms.size() == 2 )
       {
-        coral->status &= ~SFPB;
+        prk->status &= ~SFPB;
         changed = true;
       }
       else
       {
-        coral->Report("Atom %d selected, select another",n + 1);
+        prk->Report("Atom %d selected, select another",n + 1);
       };
       Redraw();
     };
   }
-  else if ( coral->status & SFAV )
+  else if ( prk->status & SFAV )
   {
     if ( SelectedAtom( n ) < 0 )
     {
-      coral->app->beep();
+      prk->app->beep();
       selected_atoms.push_back( n );
       if ( selected_atoms.size() == 3 )
       {
         monitored_angles.push_back( selected_atoms );
         selected_atoms.clear();
-        coral->status &= ~SFAV;
-        coral->Report("Atom %d selected, selection done",n + 1);  
-        coral->SetCursor( "Normal" );
+        prk->status &= ~SFAV;
+        prk->Report("Atom %d selected, selection done",n + 1);  
+        prk->SetCursor( "Normal" );
       }
       else
       {
-        coral->Report("Atom %d selected",n + 1);  
+        prk->Report("Atom %d selected",n + 1);  
       };
       Redraw();
     };
   }
-  else if ( coral->status & SFDV )
+  else if ( prk->status & SFDV )
   {
     if ( SelectedAtom( n ) < 0 )
     {
-      coral->app->beep();
+      prk->app->beep();
       selected_atoms.push_back( n );
       if ( selected_atoms.size() == 4 )
       {
         monitored_dihedrals.push_back( selected_atoms );
         selected_atoms.clear();
-        coral->status &= ~SFDV;
-        coral->Report("Atom %d selected, selection done",n + 1);  
-        coral->SetCursor( "Normal" );
+        prk->status &= ~SFDV;
+        prk->Report("Atom %d selected, selection done",n + 1);  
+        prk->SetCursor( "Normal" );
       }
       else
       {
-        coral->Report("Atom %d selected",n + 1);  
+        prk->Report("Atom %d selected",n + 1);  
       };
       Redraw();
     };
-  } else   if ( coral->status & SFB )
+  } else   if ( prk->status & SFB )
   {
-    coral->app->beep();
-    coral->Report( "Atom %d selected",n+1);
-    coral->status &= ~SFB;
+    prk->app->beep();
+    prk->Report( "Atom %d selected",n+1);
+    prk->status &= ~SFB;
     if ( NATOM == 2 )
     {
-      coral->geoeditor->AddAtom( n + 1, 2 - n, 1);
+      prk->geoeditor->AddAtom( n + 1, 2 - n, 1);
       changed = true;
     }
     else
     {
-      coral->status |= SFA;
+      prk->status |= SFA;
       selected_atoms.push_back( n );
       Redraw();
-      coral->Report("Atom %d selected",n + 1);
+      prk->Report("Atom %d selected",n + 1);
     };
   }
-  else if ( coral->status & SFA )
+  else if ( prk->status & SFA )
   {
     if ( SelectedAtom( n ) < 0 )
     {
       selected_atoms.push_back( n );
-      coral->app->beep();
-      coral->Report( "Atom %d selected",n+1);
-      coral->status &= ~SFA;
+      prk->app->beep();
+      prk->Report( "Atom %d selected",n+1);
+      prk->status &= ~SFA;
       if ( NATOM == 3 )
       {
-        coral->geoeditor->AddAtom( selected_atoms[0] + 1, n + 1,
+        prk->geoeditor->AddAtom( selected_atoms[0] + 1, n + 1,
                                    4 - selected_atoms[0] - n);
         changed = true;
       }
       else
       {
-        coral->status |= SFD;
+        prk->status |= SFD;
         Redraw();
-        coral->Report( "Atom %d selected",n + 1);
+        prk->Report( "Atom %d selected",n + 1);
       };
     };
   }
-  else if ( coral->status & SFD )
+  else if ( prk->status & SFD )
   {
     if ( SelectedAtom( n ) < 0 )
     {
       selected_atoms.push_back( n );
-      coral->app->beep();
-      coral->Report("Atom %d selected",n+1);
-      coral->status &= ~SFD;
-      coral->geoeditor->AddAtom(selected_atoms[0] + 1,
+      prk->app->beep();
+      prk->Report("Atom %d selected",n+1);
+      prk->status &= ~SFD;
+      prk->geoeditor->AddAtom(selected_atoms[0] + 1,
                                 selected_atoms[1] + 1, n + 1);
       changed = true;
     };
@@ -943,7 +972,7 @@ void Viewer::SaveSelection( int n )
   if ( changed )
   {
     selected_atoms.clear();
-    coral->SetCursor( "Normal" );
+    prk->SetCursor( "Normal" );
   };
 }
 

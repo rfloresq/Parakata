@@ -1,5 +1,5 @@
 // ******************************************************************
-// Purpose: Coral Program
+// Purpose: Parakata Program
 //
 // Roberto Flores Moreno
 //
@@ -9,15 +9,15 @@
 #include <global.h>
 #include <iostream>
 
-#include <Coral.h>
+#include <Parakata.h>
 
 using namespace std;
 
 int main(int argc, char **argv)
 {
   QApplication app(argc, argv);
-  QCoreApplication::setOrganizationName("Coral developer");
-  QCoreApplication::setApplicationName("Coral");
+  QCoreApplication::setOrganizationName("Parakata developer");
+  QCoreApplication::setApplicationName("Parakata");
   QCoreApplication::setApplicationVersion(QT_VERSION_STR);
   QCommandLineParser parser;
 
@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   parser.addPositionalArgument("file", "The file to open.");
   parser.process(app);
 
-  Coral coral(&app,argc,argv);
-  coral.show();
+  Parakata prk(&app,argc,argv);
+  prk.show();
   return app.exec();
 }
